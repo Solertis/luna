@@ -27,6 +27,7 @@ dependencies:
     - lens
     - mtl
     - typelevel
+    - z3
 
 default-extensions:
     - AllowAmbiguousTypes
