@@ -15,6 +15,7 @@ packages:
     - location: ../passes
     - location: ../stdlib
     - location: ../project
+    - location: ../build
     - location: ../syntax/text/parser
     - location: ../syntax/text/lexer
     - location: ../../libs/container
