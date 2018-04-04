@@ -28,6 +28,7 @@ dependencies:
     - lens
     - mtl
     - typelevel
+    - text
     - z3
 
 default-extensions:
