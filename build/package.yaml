@@ -13,6 +13,7 @@ tests:
         source-dirs: test/spec
         dependencies:
             - luna-core
+            - luna-build
             - directory
             - filepath
             - hspec

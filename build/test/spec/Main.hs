@@ -1,6 +1,9 @@
 module Main where
 
-import Prelude
+import Prologue
+import qualified Prelude as P
 
-main :: IO ()
-main = return ()
+import Luna.Build.Dependency.Resolver
+
+main :: P.IO ()
+main = P.return ()
