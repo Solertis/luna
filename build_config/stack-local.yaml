@@ -18,6 +18,7 @@ packages:
     - location: ../build
     - location: ../syntax/text/parser
     - location: ../syntax/text/lexer
+    - location: ../lib/ci
     - location: ../../libs/container
     - location: ../../libs/convert
     - location: ../../libs/data-base
