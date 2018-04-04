@@ -8,9 +8,6 @@ import Data.Text
 
 import Test.Hspec
 
-satData :: [(Text, Float, Float)]
-satData = [("foo", 2.1, 3.5)]
-
 spec :: Spec
 spec = do
     describe "testing" $ do

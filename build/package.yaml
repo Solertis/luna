@@ -14,6 +14,7 @@ tests:
         dependencies:
             - luna-core
             - luna-build
+            - luna-ci
             - directory
             - filepath
             - hspec
@@ -30,6 +31,7 @@ dependencies:
     - typelevel
     - text
     - z3
+    - containers
 
 default-extensions:
     - AllowAmbiguousTypes
