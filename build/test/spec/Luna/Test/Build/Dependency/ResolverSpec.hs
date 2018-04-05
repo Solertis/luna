@@ -11,5 +11,7 @@ import Test.Hspec
 spec :: Spec
 spec = do
     describe "testing" $ do
-        it "foo" $ resolveThings `shouldBe` (Just 1)
+        it "foo" $ do
+            result <- runner
+            result `shouldBe` (Just 1)
 

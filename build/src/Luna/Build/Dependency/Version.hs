@@ -8,4 +8,5 @@ import qualified Data.Text as T
 -- Should it follow semver?
 -- What can be assumed about the input version format
 -- Can we assume split on strings?
+-- Some concerns over DoS vector on large inputs
 

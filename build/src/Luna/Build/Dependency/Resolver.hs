@@ -14,6 +14,11 @@ import Control.Monad ( join )
 import Data.Maybe
 import qualified Data.Traversable as T
 
+-- Global set of resolved packages
+-- Standardised versioning schema with 6 components
+-- Alpha/Beta/rc (1/2/3)
+-- `liftIO` into another monad with an IO constraint
+
 resolveThings :: Maybe Int
 resolveThings = Just 1
 
@@ -53,9 +58,9 @@ constraintScript = do
           diagonal d c c' =
             join $ mkEq <$> (mkAbs =<< mkSub [c',c]) <*> (mkInteger d)
 
-runner :: IO String
+runner :: IO (Maybe Int)
 runner = evalZ3 constraintScript >>= \mbSol ->
             case mbSol of
-                 Nothing  -> return "No solution found."
-                 Just sol -> return "Solution found."
+                Nothing  -> return Nothing
+                Just sol -> return $ Just 1
 
