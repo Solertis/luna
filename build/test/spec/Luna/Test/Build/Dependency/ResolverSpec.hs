@@ -4,8 +4,6 @@ import Luna.Build.Dependency.Resolver
 
 import Prologue
 
-import Data.Text
-
 import Test.Hspec
 
 spec :: Spec

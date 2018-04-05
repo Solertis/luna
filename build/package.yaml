@@ -19,6 +19,7 @@ tests:
             - filepath
             - hspec
             - hspec-jenkins
+            - hspec-megaparsec
             - open-browser
 
 dependencies:
@@ -30,6 +31,7 @@ dependencies:
     - mtl
     - typelevel
     - text
+    - megaparsec
     - z3
     - containers
 

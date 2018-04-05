@@ -15,9 +15,8 @@ import Data.Maybe
 import qualified Data.Traversable as T
 
 -- Global set of resolved packages
--- Standardised versioning schema with 6 components
--- Alpha/Beta/rc (1/2/3)
--- `liftIO` into another monad with an IO constraint
+-- `liftIO` into another monad with an IO constraint:
+-- (MonadIO m) => m a
 
 resolveThings :: Maybe Int
 resolveThings = Just 1
