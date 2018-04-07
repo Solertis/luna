@@ -71,12 +71,28 @@ spec = do
             (Version 1 1 1 (Just (Prerelease Alpha 1))) `shouldSatisfy`
             (< (Version 1 1 1 (Just (Prerelease Alpha 2))))
         it "ordering within prereleases, different prerelease stage" $
-            (Version 1 1 1 (Just (Prerelease Alpha 1))) `shouldSatisfy`
+            (Version 1 1 1 (Just (Prerelease Alpha 3))) `shouldSatisfy`
             (< (Version 1 1 1 (Just (Prerelease Beta 1))))
         it "equal versions" $ (Version 1 1 1 Nothing) `shouldSatisfy`
             (== (Version 1 1 1 Nothing))
         it "non-equal versions" $ (Version 1 1 1 Nothing) `shouldNotSatisfy`
             (== (Version 1 1 1 (Just (Prerelease Alpha 1))))
-        it "foo" $ (Version 1 7 13 Nothing) `shouldSatisfy` (< (Version 84 37 52 Nothing))
-        it "bar" $ (Version 44 31 36 Nothing) `shouldSatisfy` (< (Version 71 46 3 (Just (Prerelease Beta 7))))
+        it "random versions without prereleases" $
+            (Version 1 7 13 Nothing) `shouldNotSatisfy`
+            (> (Version 84 37 52 Nothing))
+        it "newer version vs prerelease from older version" $
+            (Version 44 31 36 Nothing) `shouldSatisfy`
+            (< (Version 71 46 3 (Just (Prerelease Beta 7))))
+
+    describe "Conversion between Version tyoes" $ do
+        it "version with no prerelease" $ versionToSolverVersion
+            (Version 1 1 2 Nothing) `shouldBe` (SolverVersion 1 1 2 3 0)
+        it "version with prerelease" $ versionToSolverVersion
+            (Version 11 31 2 (Just (Prerelease Beta 5))) `shouldBe`
+            (SolverVersion 11 31 2 1 5)
+        it "solverVersion with no prerelease" $ solverVersionToVersion
+            (SolverVersion 1 42 5 3 5) `shouldBe` (Version 1 42 5 Nothing)
+        it "solverVersion with prerelease" $ solverVersionToVersion
+            (SolverVersion 32 1 0 0 2) `shouldBe`
+            (Version 32 1 0 (Just (Prerelease Alpha 2)))
 

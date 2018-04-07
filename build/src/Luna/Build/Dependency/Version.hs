@@ -2,7 +2,10 @@ module Luna.Build.Dependency.Version
     ( PrereleaseType(..)
     , Prerelease(..)
     , Version(..)
+    , SolverVersion(..)
     , parseVersion
+    , versionToSolverVersion
+    , solverVersionToVersion
     , versionP
     , prereleaseP
     , prereleaseTypeP
@@ -12,7 +15,6 @@ import Prologue
 
 import qualified Text.Read as R
 
-import qualified Data.Text            as T
 import qualified Text.Megaparsec      as P
 import qualified Text.Megaparsec.Text as P
 
@@ -31,48 +33,31 @@ data PrereleaseType
     | RC
     deriving (Eq, Generic, Ord)
 
+instance Show PrereleaseType where
+    show Alpha = "alpha"
+    show Beta  = "beta"
+    show RC    = "rc"
+
 data Prerelease = Prerelease
     { _prType  :: !PrereleaseType
     , _version :: !Int
     } deriving (Eq, Generic, Ord)
 makeLenses ''Prerelease
 
+instance Show Prerelease where
+    show (Prerelease ty ver) = (show ty) <> "." <> (show ver)
+
 data Version = Version
-    { _major      :: !Int
-    , _minor      :: !Int
-    , _patch      :: !Int
-    , _prerelease :: !(Maybe Prerelease)
+    { __major      :: !Int
+    , __minor      :: !Int
+    , __patch      :: !Int
+    , __prerelease :: !(Maybe Prerelease)
     } deriving (Eq, Generic)
 makeLenses ''Version
 
 instance Ord Version where
     v1@(Version maj1 min1 pat1 pre1) <= v2@(Version maj2 min2 pat2 pre2) =
-        versionsOrdered && prereleaseOrdered
-        where
-            majorOrdered = maj1 <= maj2
-            minorOrdered = min1 <= min2
-            patchOrdered = pat1 <= pat2
-            versionsOrdered = if majorOrdered then True
-                else if minorOrdered then majorOrdered && minorOrdered
-                else if patchOrdered then
-                    majorOrdered && minorOrdered && patchOrdered
-                else False
-            prereleaseOrdered = case (pre1, pre2) of
-                (Nothing, Nothing) -> True
-                (Nothing, _) -> False
-                (_, Nothing) -> True
-                (Just (Prerelease ty1 ver1), Just (Prerelease ty2 ver2)) ->
-                    if (ty1 <= ty2) then True
-                    else if ver1 <= ver2 then (ty1 <= ty2) && (ver1 <= ver2)
-                    else False
-
-instance Show PrereleaseType where
-    show Alpha = "alpha"
-    show Beta  = "beta"
-    show RC    = "rc"
-
-instance Show Prerelease where
-    show (Prerelease ty ver) = (show ty) <> "." <> (show ver)
+        (versionToSolverVersion v1) <= (versionToSolverVersion v2)
 
 instance Show Version where
     show (Version maj min patch pr) = nums <> (showPre pr)
@@ -81,10 +66,43 @@ instance Show Version where
                   Nothing -> ""
                   Just pre -> "-" <> show pre
 
+versionToSolverVersion :: Version -> SolverVersion
+versionToSolverVersion (Version maj min pat pre) = case pre of
+    Nothing -> SolverVersion maj min pat 3 0 -- 3 indicates no prerelease
+    Just (Prerelease ty ver) -> SolverVersion maj min pat (toNum ty) ver
+    where toNum Alpha = 0
+          toNum Beta  = 1
+          toNum RC    = 2
+
+data SolverVersion = SolverVersion
+    { __major      :: !Int
+    , __minor      :: !Int
+    , __patch      :: !Int
+    , __prerelease :: !Int
+    , __preVersion :: !Int
+    } deriving (Eq, Generic, Ord)
+makeLenses ''SolverVersion
+
+instance Show SolverVersion where
+    show sv = show $ solverVersionToVersion sv
+
+solverVersionToVersion :: SolverVersion -> Version
+solverVersionToVersion (SolverVersion maj min pat pre preVer) =
+    (Version maj min pat preResult)
+    where preResult = case pre of
+            0 -> Just (Prerelease Alpha preVer)
+            1 -> Just (Prerelease Beta preVer)
+            2 -> Just (Prerelease RC preVer)
+            _ -> Nothing
+
 parseVersion :: Text -> Maybe Version
 parseVersion tx = case P.runParser versionP "" tx of
                       Left err -> Nothing
                       Right res -> Just res
+
+-----------------------
+-- Parsing Functions --
+-----------------------
 
 versionP :: P.Parser Version
 versionP = do
