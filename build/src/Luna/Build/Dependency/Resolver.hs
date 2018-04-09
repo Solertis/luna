@@ -9,57 +9,93 @@ import Z3.Opts
 
 import qualified Data.Text as Text
 
+import qualified Control.Monad.Trans as C
+
 import Control.Applicative
 import Control.Monad ( join )
 import Data.Maybe
 import qualified Data.Traversable as T
 
+import Luna.Build.Dependency.Constraint
+
+import Debug.Trace
+
 -- Global set of resolved packages
 -- `liftIO` into another monad with an IO constraint:
 -- (MonadIO m) => m a
 
-resolveThings :: Maybe Int
-resolveThings = Just 1
+solveConstraints :: ConstraintMap -> Maybe ConstraintMap
+solveConstraints = undefined
 
-constraintScript :: Z3 (Maybe [Integer])
+mkVersionDatatype :: Z3 Sort
+mkVersionDatatype = do
+    mkVersion <- mkStringSymbol "mkVersion"
+    isVersion <- mkStringSymbol "isVersion"
+
+    -- Item accessors
+    getMajor <- mkStringSymbol "getMajor"
+    getMinor <- mkStringSymbol "getMinor"
+    getPatch <- mkStringSymbol "getPatch"
+    getPre   <- mkStringSymbol "getPre"
+    getPreV  <- mkStringSymbol "getPreV"
+
+    intSort <- mkIntSort
+    let recordSorter = Just intSort
+
+    versionConst <- mkConstructor mkVersion isVersion
+        [ (getMajor, recordSorter, 0)
+        , (getMinor, recordSorter, 0)
+        , (getPatch, recordSorter, 0)
+        , (getPre,   recordSorter, 0)
+        , (getPreV,  recordSorter, 0)]
+
+    version <- mkStringSymbol "version"
+    mkDatatype version [versionConst]
+
+versionGT :: (MonadZ3 z3) => z3 AST
+versionGT = undefined
+
+versionLT :: (MonadZ3 z3) => z3 AST
+versionLT = undefined
+
+versionGE :: (MonadZ3 z3) => z3 AST
+versionGE = undefined
+
+versionLE :: (MonadZ3 z3) => z3 AST
+versionLE = undefined
+
+-- TODO [Ara] get the solution out of this
+constraintScript :: Z3 (Maybe Integer)
 constraintScript = do
-    q1 <- mkFreshIntVar "q1"
-    q2 <- mkFreshIntVar "q2"
-    q3 <- mkFreshIntVar "q3"
-    q4 <- mkFreshIntVar "q4"
-    _1 <- mkInteger 1
-    _4 <- mkInteger 4
-    -- the ith-queen is in the ith-row.
-    -- qi is the column of the ith-queen
-    assert =<< mkAnd =<< T.sequence
-      [ mkLe _1 q1, mkLe q1 _4  -- 1 <= q1 <= 4
-      , mkLe _1 q2, mkLe q2 _4
-      , mkLe _1 q3, mkLe q3 _4
-      , mkLe _1 q4, mkLe q4 _4
-      ]
-    -- different columns
-    assert =<< mkDistinct [q1,q2,q3,q4]
-    -- avoid diagonal attacks
-    assert =<< mkNot =<< mkOr =<< T.sequence
-      [ diagonal 1 q1 q2  -- diagonal line of attack between q1 and q2
-      , diagonal 2 q1 q3
-      , diagonal 3 q1 q4
-      , diagonal 1 q2 q3
-      , diagonal 2 q2 q4
-      , diagonal 1 q3 q4
-      ]
-    -- check and get solution
-    fmap snd $ withModel $ \m ->
-      catMaybes <$> mapM (evalInt m) [q1,q2,q3,q4]
-    where mkAbs x = do
-            _0 <- mkInteger 0
-            join $ mkIte <$> mkLe _0 x <*> pure x <*> mkUnaryMinus x
-          diagonal d c c' =
-            join $ mkEq <$> (mkAbs =<< mkSub [c',c]) <*> (mkInteger d)
+    version <- mkVersionDatatype
+    [mkVersion] <- getDatatypeSortConstructors version
 
-runner :: IO (Maybe Int)
+    vars1 <- T.sequence $ mkInteger <$> [1, 2, 3, 2, 5] -- 1.2.3-rc.5
+    t1 <- mkApp mkVersion vars1
+
+    vars2 <- T.sequence $ mkInteger <$> [0, 0, 1, 0, 1] -- 0.0.1-alpha.1
+    t2 <- mkApp mkVersion vars2
+
+    -- package Foo == t2, >= t1 (expect unsat)
+
+    foo <- mkFreshVar "foo" version
+
+    assert =<< mkAnd =<< T.sequence
+        [ mkEq foo t2
+        , mkEq foo t1 ]
+
+    {- check >>= C.liftIO . print -}
+    check
+    (result, model) <- getModel
+
+    case result of
+        Sat -> return $ Just 1
+        Unsat -> return $ Nothing
+        Undef -> return $ Nothing
+
+runner :: IO (Maybe Integer)
 runner = evalZ3 constraintScript >>= \mbSol ->
             case mbSol of
                 Nothing  -> return Nothing
-                Just sol -> return $ Just 1
+                Just sol -> return mbSol
 
