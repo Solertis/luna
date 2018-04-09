@@ -27,7 +27,7 @@ import Debug.Trace
 solveConstraints :: ConstraintMap -> Maybe ConstraintMap
 solveConstraints = undefined
 
-mkVersionDatatype :: Z3 Sort
+mkVersionDatatype :: (MonadZ3 m) => m Sort
 mkVersionDatatype = do
     mkVersion <- mkStringSymbol "mkVersion"
     isVersion <- mkStringSymbol "isVersion"
@@ -52,23 +52,50 @@ mkVersionDatatype = do
     version <- mkStringSymbol "version"
     mkDatatype version [versionConst]
 
-versionGT :: (MonadZ3 z3) => z3 AST
-versionGT = undefined
+versionLT :: (MonadZ3 m) => AST -> AST -> m AST
+versionLT l r = do
+    version <- mkVersionDatatype
+    [[getMajor, getMinor, getPatch, getPre, getPreV]] <-
+        getDatatypeSortConstructorAccessors version
 
-versionLT :: (MonadZ3 z3) => z3 AST
-versionLT = undefined
+    majorL <- mkApp getMajor [l]
+    majorR <- mkApp getMajor [r]
+    minorL <- mkApp getMinor [l]
+    minorR <- mkApp getMinor [r]
+    patchL <- mkApp getPatch [l]
+    patchR <- mkApp getPatch [r]
+    preL   <- mkApp getPre   [l]
+    preR   <- mkApp getPre   [r]
+    preVL  <- mkApp getPreV  [l]
+    preVR  <- mkApp getPreV  [r]
 
-versionGE :: (MonadZ3 z3) => z3 AST
-versionGE = undefined
+    mkLt majorL majorR
 
-versionLE :: (MonadZ3 z3) => z3 AST
-versionLE = undefined
+versionLE :: (MonadZ3 m) => AST -> AST -> m AST
+versionLE l r = do
+    lt <- versionLT l r
+    eq <- mkEq l r
+    mkOr [lt, eq]
+
+versionGT :: (MonadZ3 m) => AST -> AST -> m AST
+versionGT l r = do
+    le <- versionLE l r
+    mkNot le
+
+versionGE :: (MonadZ3 m) => AST -> AST -> m AST
+versionGE l r = do
+    lt <- versionLT l r
+    mkNot lt
 
 -- TODO [Ara] get the solution out of this
 constraintScript :: Z3 (Maybe Integer)
 constraintScript = do
     version <- mkVersionDatatype
+
+    -- Only a single constructor with accessors
     [mkVersion] <- getDatatypeSortConstructors version
+    [[getMajor, getMinor, getPatch, getPre, getPreV]] <-
+        getDatatypeSortConstructorAccessors version
 
     vars1 <- T.sequence $ mkInteger <$> [1, 2, 3, 2, 5] -- 1.2.3-rc.5
     t1 <- mkApp mkVersion vars1
@@ -80,9 +107,12 @@ constraintScript = do
 
     foo <- mkFreshVar "foo" version
 
+    major1 <- mkApp getMajor [t1]
+    major2 <- mkApp getMajor [t2]
+
     assert =<< mkAnd =<< T.sequence
-        [ mkEq foo t2
-        , mkEq foo t1 ]
+        [ versionLT foo t1
+        , mkEq foo t2 ]
 
     {- check >>= C.liftIO . print -}
     check
