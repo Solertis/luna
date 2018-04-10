@@ -1,8 +1,8 @@
 module Luna.Build.Dependency.Resolver where
 
-{- import Prologue -}
+import Prologue
 
-import Prelude
+import qualified Prelude as P
 
 import Z3.Monad
 import Z3.Opts
@@ -52,12 +52,13 @@ mkVersionDatatype = do
     version <- mkStringSymbol "version"
     mkDatatype version [versionConst]
 
-versionLT :: (MonadZ3 m) => AST -> AST -> m AST
-versionLT l r = do
+mkVersionLT :: (MonadZ3 m) => AST -> AST -> m AST
+mkVersionLT l r = do
     version <- mkVersionDatatype
     [[getMajor, getMinor, getPatch, getPre, getPreV]] <-
         getDatatypeSortConstructorAccessors version
 
+    -- Get AST nodes corresponding to record fields for l and r
     majorL <- mkApp getMajor [l]
     majorR <- mkApp getMajor [r]
     minorL <- mkApp getMinor [l]
@@ -69,22 +70,65 @@ versionLT l r = do
     preVL  <- mkApp getPreV  [l]
     preVR  <- mkApp getPreV  [r]
 
-    mkLt majorL majorR
+    -- Utility nodes
+    true  <- mkTrue
+    false <- mkFalse
 
-versionLE :: (MonadZ3 m) => AST -> AST -> m AST
-versionLE l r = do
-    lt <- versionLT l r
+    -- The following Z3 formula implements this logic
+    --
+    -- if majorL < majorR then True
+    -- else if majorL == majorR then
+    --     if minorL < minorR then True
+    --     else if minorL == minorR then
+    --         if patchL < patchR then True
+    --         else if patchL == patchR then
+    --             if preL < preR then True
+    --             else if preL == preR then
+    --                 if preVL < preVR then True
+    --                 else False
+    --             else False
+    --         else False
+    --     else False
+    -- else False
+
+    -- Build the condition components for LT expr
+    majorLT <- mkLt majorL majorR
+    majorEQ <- mkEq majorL majorR
+    minorLT <- mkLt minorL minorR
+    minorEQ <- mkEq minorL minorR
+    patchLT <- mkLt patchL patchR
+    patchEQ <- mkEq patchL patchR
+    preLT   <- mkLt preL preR
+    preEQ   <- mkEq preL preR
+    preVLT  <- mkLt preVL preVR
+
+    -- Build the sub if-then-else expressions
+    ifPreVLT  <- mkIte preVLT true false
+    ifPreEQ   <- mkIte preEQ preVLT false
+    ifPreLT   <- mkIte preLT true ifPreEQ
+    ifPatchEQ <- mkIte patchEQ ifPreLT false
+    ifPatchLT <- mkIte patchLT true ifPatchEQ
+    ifMinorEQ <- mkIte minorEQ ifPatchLT false
+    ifMinorLT <- mkIte minorLT true ifMinorEQ
+    ifMajorEQ <- mkIte majorEQ ifMinorLT false
+
+    -- Evaluate the expression
+    mkIte majorLT true ifMajorEQ
+
+mkVersionLE :: (MonadZ3 m) => AST -> AST -> m AST
+mkVersionLE l r = do
+    lt <- mkVersionLT l r
     eq <- mkEq l r
     mkOr [lt, eq]
 
-versionGT :: (MonadZ3 m) => AST -> AST -> m AST
-versionGT l r = do
-    le <- versionLE l r
+mkVersionGT :: (MonadZ3 m) => AST -> AST -> m AST
+mkVersionGT l r = do
+    le <- mkVersionLE l r
     mkNot le
 
-versionGE :: (MonadZ3 m) => AST -> AST -> m AST
-versionGE l r = do
-    lt <- versionLT l r
+mkVersionGE :: (MonadZ3 m) => AST -> AST -> m AST
+mkVersionGE l r = do
+    lt <- mkVersionLT l r
     mkNot lt
 
 -- TODO [Ara] get the solution out of this
@@ -97,10 +141,10 @@ constraintScript = do
     [[getMajor, getMinor, getPatch, getPre, getPreV]] <-
         getDatatypeSortConstructorAccessors version
 
-    vars1 <- T.sequence $ mkInteger <$> [1, 2, 3, 2, 5] -- 1.2.3-rc.5
+    vars1 <- T.sequence $ mkInteger <$> [44, 31, 36, 3, 0] -- 1.2.3-rc.5
     t1 <- mkApp mkVersion vars1
 
-    vars2 <- T.sequence $ mkInteger <$> [0, 0, 1, 0, 1] -- 0.0.1-alpha.1
+    vars2 <- T.sequence $ mkInteger <$> [71, 46, 3, 1, 7] -- 0.0.1-alpha.1
     t2 <- mkApp mkVersion vars2
 
     -- package Foo == t2, >= t1 (expect unsat)
@@ -110,22 +154,23 @@ constraintScript = do
     major1 <- mkApp getMajor [t1]
     major2 <- mkApp getMajor [t2]
 
-    assert =<< mkAnd =<< T.sequence
-        [ versionLT foo t1
-        , mkEq foo t2 ]
+    Z3.Monad.assert =<< mkAnd =<< T.sequence
+        [ mkVersionLT t1 t2 ]
+        {- [ mkVersionLT foo t1 -}
+        {- , mkEq foo t2 ] -}
 
     {- check >>= C.liftIO . print -}
     check
     (result, model) <- getModel
 
     case result of
-        Sat -> return $ Just 1
-        Unsat -> return $ Nothing
-        Undef -> return $ Nothing
+        Sat -> pure $ Just 1
+        Unsat -> pure $ Nothing
+        Undef -> pure $ Nothing
 
 runner :: IO (Maybe Integer)
 runner = evalZ3 constraintScript >>= \mbSol ->
             case mbSol of
-                Nothing  -> return Nothing
-                Just sol -> return mbSol
+                Nothing  -> pure Nothing
+                Just sol -> pure mbSol
 

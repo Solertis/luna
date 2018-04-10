@@ -56,8 +56,7 @@ data Version = Version
 makeLenses ''Version
 
 instance Ord Version where
-    v1@(Version maj1 min1 pat1 pre1) <= v2@(Version maj2 min2 pat2 pre2) =
-        (versionToSolverVersion v1) <= (versionToSolverVersion v2)
+    v1 <= v2 = (versionToSolverVersion v1) <= (versionToSolverVersion v2)
 
 instance Show Version where
     show (Version maj min patch pr) = nums <> (showPre pr)
