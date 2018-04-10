@@ -11,43 +11,43 @@ import Test.Hspec
 spec :: Spec
 spec = do
     describe "Parsing of pre-release types" $ do
-        it "literal alpha" $ shouldParseTo "alpha" prereleaseTypeP Alpha
-        it "literal beta"  $ shouldParseTo "beta"  prereleaseTypeP Beta
-        it "literal rc"    $ shouldParseTo "rc"    prereleaseTypeP RC
-        it "invalid type"  $ prereleaseTypeP `shouldFailToParse` "foo"
+        it "literal alpha" $ shouldParseTo "alpha" prereleaseType Alpha
+        it "literal beta"  $ shouldParseTo "beta"  prereleaseType Beta
+        it "literal rc"    $ shouldParseTo "rc"    prereleaseType RC
+        it "invalid type"  $ prereleaseType `shouldFailToParse` "foo"
 
     describe "Parsing of pre-release tags" $ do
-        it "alpha tag"         $ shouldParseTo "alpha.1" prereleaseP
+        it "alpha tag"         $ shouldParseTo "alpha.1" prerelease
                                  (Prerelease Alpha 1)
-        it "beta tag"          $ shouldParseTo "beta.231" prereleaseP
+        it "beta tag"          $ shouldParseTo "beta.231" prerelease
                                  (Prerelease Beta 231)
-        it "rc tag"            $ shouldParseTo "rc.0" prereleaseP
+        it "rc tag"            $ shouldParseTo "rc.0" prerelease
                                  (Prerelease RC 0)
-        it "silly number"      $ shouldParseTo "alpha.0000" prereleaseP
+        it "silly number"      $ shouldParseTo "alpha.0000" prerelease
                                  (Prerelease Alpha 0)
-        it "invalid tag"       $ prereleaseP `shouldFailToParse` "foo.1"
-        it "missing number"    $ prereleaseP `shouldFailToParse` "alpha."
-        it "letter for number" $ prereleaseP `shouldFailToParse` "alpha.a"
+        it "invalid tag"       $ prerelease `shouldFailToParse` "foo.1"
+        it "missing number"    $ prerelease `shouldFailToParse` "alpha."
+        it "letter for number" $ prerelease `shouldFailToParse` "alpha.a"
 
     describe "Parsing of version strings" $ do
         it "basic version string" $
             shouldParseTo "0.0.1-alpha.0"
-            versionP (Version 0 0 1 (Just (Prerelease Alpha 0)))
+            version (Version 0 0 1 (Just (Prerelease Alpha 0)))
         it "omission of patch" $
-            shouldParseTo "1.0" versionP (Version 1 0 0 Nothing)
+            shouldParseTo "1.0" version (Version 1 0 0 Nothing)
         it "omission of patch with prerelease" $
             shouldParseTo "12.2-beta.1"
-            versionP (Version 12 2 0 (Just (Prerelease Beta 1)))
+            version (Version 12 2 0 (Just (Prerelease Beta 1)))
         it "omission of minor version" $
-            shouldParseTo "12" versionP (Version 12 0 0 Nothing)
+            shouldParseTo "12" version (Version 12 0 0 Nothing)
         it "omission of minor version with prerelease" $
-            shouldParseTo "12-rc.2" versionP
+            shouldParseTo "12-rc.2" version
             (Version 12 0 0 (Just (Prerelease RC 2)))
         it "omission of prerelease" $
-            shouldParseTo "2.3.1" versionP (Version 2 3 1 Nothing)
-        it "invalid version" $ versionP `shouldFailToParse` "0.0.0"
+            shouldParseTo "2.3.1" version (Version 2 3 1 Nothing)
+        it "invalid version" $ version `shouldFailToParse` "0.0.0"
         it "invalid version with prerelease" $
-            versionP `shouldFailToParse` "0.0.0-alpha.1"
+            version `shouldFailToParse` "0.0.0-alpha.1"
 
     describe "Version ordering" $ do
         it "correctly ordered versions" $ (Version 0 0 1 Nothing)

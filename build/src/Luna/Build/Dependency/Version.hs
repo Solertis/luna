@@ -6,9 +6,9 @@ module Luna.Build.Dependency.Version
     , parseVersion
     , versionToSolverVersion
     , solverVersionToVersion
-    , versionP
-    , prereleaseP
-    , prereleaseTypeP
+    , version
+    , prerelease
+    , prereleaseType
     ) where
 
 import Prologue
@@ -39,8 +39,8 @@ instance Show PrereleaseType where
     show RC    = "rc"
 
 data Prerelease = Prerelease
-    { _prType  :: !PrereleaseType
-    , _version :: !Int
+    { __prType  :: !PrereleaseType
+    , __version :: !Int
     } deriving (Eq, Generic, Ord)
 makeLenses ''Prerelease
 
@@ -95,7 +95,7 @@ solverVersionToVersion (SolverVersion maj min pat pre preVer) =
             _ -> Nothing
 
 parseVersion :: Text -> Maybe Version
-parseVersion tx = case P.runParser versionP "" tx of
+parseVersion tx = case P.runParser version "" tx of
                       Left err -> Nothing
                       Right res -> Just res
 
@@ -103,21 +103,23 @@ parseVersion tx = case P.runParser versionP "" tx of
 -- Parsing Functions --
 -----------------------
 
-versionP :: P.Parser Version
-versionP = do
+-- TODO [Ara] rename parsers
+
+version :: P.Parser Version
+version = do
     major <- natural
     minor <- P.option 0 (dot *> natural)
     patch <- P.option 0 (dot *> natural)
-    prerelease <- P.optional (P.char '-' *> prereleaseP)
+    prerelease <- P.optional (P.char '-' *> prerelease)
     if major + minor + patch == 0 then fail msg else
         pure $ Version major minor patch prerelease
     where msg = "Not all components of the version can be zero."
 
-prereleaseP :: P.Parser Prerelease
-prereleaseP = Prerelease <$> prereleaseTypeP <* dot <*> natural
+prerelease :: P.Parser Prerelease
+prerelease = Prerelease <$> prereleaseType <* dot <*> natural
 
-prereleaseTypeP :: P.Parser PrereleaseType
-prereleaseTypeP = fromString <$> p
+prereleaseType :: P.Parser PrereleaseType
+prereleaseType = fromString <$> p
     where fromString "alpha" = Alpha
           fromString "beta"  = Beta
           fromString "rc"    = RC
