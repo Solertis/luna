@@ -1,4 +1,4 @@
-module Luna.Build.Dependency.Resolver ( runner ) where
+module Luna.Build.Dependency.Resolver ( solveConstraints ) where
 
 import Prologue
 
@@ -23,9 +23,6 @@ import Debug.Trace
 -- Global set of resolved packages
 -- `liftIO` into another monad with an IO constraint:
 -- (MonadIO m) => m a
-
-solveConstraints :: ConstraintMap -> Maybe ConstraintMap
-solveConstraints = undefined
 
 mkVersionDatatype :: (MonadZ3 m) => m Sort
 mkVersionDatatype = do
@@ -122,17 +119,16 @@ mkVersionLE l r = do
     mkOr [lt, eq]
 
 mkVersionGT :: (MonadZ3 m) => AST -> AST -> m AST
-mkVersionGT l r = do
-    le <- mkVersionLE l r
-    mkNot le
+mkVersionGT l r = mkVersionLE l r >>= mkNot
 
 mkVersionGE :: (MonadZ3 m) => AST -> AST -> m AST
-mkVersionGE l r = do
-    lt <- mkVersionLT l r
-    mkNot lt
+mkVersionGE l r = mkVersionLT l r >>= mkNot
 
 mkVersionEQ :: (MonadZ3 m) => AST -> AST -> m AST
 mkVersionEQ l r = mkEq l r
+
+mkVersionNE :: (MonadZ3 m) => AST -> AST -> m AST
+mkVersionNE l r = mkEq l r >>= mkNot
 
 -- TODO [Ara] get the solution out of this
 constraintScript :: ConstraintMap -> Z3 (Maybe Model)
@@ -141,6 +137,7 @@ constraintScript constraints = do
 
     -- Only a single constructor with accessors
     [mkVersion] <- getDatatypeSortConstructors version
+    let mkVersionPure = pure mkVersion :: Z3 FuncDecl
     [[getMajor, getMinor, getPatch, getPre, getPreV]] <-
         getDatatypeSortConstructorAccessors version
 
@@ -166,6 +163,8 @@ constraintScript constraints = do
     vars5 <- T.sequence $ mkInteger <$> [1, 3, 2, 3, 0]
     v5 <- mkApp mkVersion vars5
 
+    -- Create them with mkFreshVar and then use `mkVar` to access them in a
+    -- programmatic fashion.
     foo <- mkFreshVar "foo" version
     bar <- mkFreshVar "bar" version
     baz <- mkFreshVar "baz" version
@@ -184,9 +183,11 @@ constraintScript constraints = do
         Unsat -> pure Nothing
         Undef -> pure Nothing
 
-runner :: IO (Maybe Integer)
-runner = evalZ3 (constraintScript undefined) >>= \mbSol ->
-            case mbSol of
-                Nothing  -> pure Nothing
-                Just sol -> pure $ Just 1
+-- TODO [Ara] hoist this to MonadIO
+-- TODO [Ara] should return ConstraintMap
+solveConstraints :: ConstraintMap -> IO (Maybe Integer)
+solveConstraints constraints = evalZ3 (constraintScript constraints) >>=
+    \mbSol -> case mbSol of
+        Nothing  -> pure Nothing
+        Just sol -> pure $ Just 1
 

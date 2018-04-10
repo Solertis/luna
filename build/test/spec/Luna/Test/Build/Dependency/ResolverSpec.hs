@@ -21,6 +21,6 @@ spec :: Spec
 spec = do
     describe "testing" $ do
         it "foo" $ do
-            result <- runner
+            result <- solveConstraints undefined
             result `shouldBe` (Just 1)
 
