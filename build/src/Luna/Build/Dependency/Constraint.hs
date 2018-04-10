@@ -1,16 +1,24 @@
-module Luna.Build.Dependency.Constraint where
+module Luna.Build.Dependency.Constraint
+    ( ConstraintMap(..)
+    , ConstraintType(..)
+    , Constraint(..)
+    , operator
+    , constraint
+    , constraints
+    , V.versionToSolverVersion
+    ) where
 
-import Prologue hiding (Constraint)
+import Prologue hiding (Constraint, and)
 
-import Luna.Build.Dependency.Version (Version(..), version)
+import qualified Luna.Build.Dependency.Version as V
 
 import qualified Data.Map.Strict as M
-import qualified Data.Text       as T
 
 import qualified Text.Megaparsec      as P
 import qualified Text.Megaparsec.Text as P
+import Luna.Build.Dependency.ParserUtils
 
-type ConstraintMap = M.Map T.Text [Constraint]
+type ConstraintMap = M.Map Text [Constraint]
 
 data ConstraintType
     = ConstraintEQ
@@ -21,28 +29,29 @@ data ConstraintType
     deriving (Eq, Generic, Ord, Show)
 
 data Constraint = Constraint
-    { _conType :: !ConstraintType
-    , _version :: !Version
+    { __conType :: !ConstraintType
+    , __version :: !V.Version
     } deriving (Eq, Generic, Ord, Show)
 makeLenses ''Constraint
+
+-- TODO [Ara] Logic around major versions: (< 2.0) should probably exclude 2.0
+-- alphas as well
+-- TODO [Ara] Logic around prerelease versions. Should they ever be selected
+-- automatically?
 
 -----------------------
 -- Parsing Functions --
 -----------------------
 
--- foo (>= 2.1.3 && <= 3.0.0) || 2.0.8
+constraints :: P.Parser [Constraint]
+constraints = constraint `P.sepBy` and
 
--- TODO [Ara] Check ranges are proper before converting to constraints
+constraint :: P.Parser Constraint
+constraint = Constraint <$> operator <* spaces
+          <*> V.version <* spaces
 
-constraintsP :: P.Parser [Constraint]
-constraintsP = undefined
-
-constraintP :: P.Parser Constraint
-constraintP = flip Constraint (Version 1 1 1 Nothing) <$> operatorP <* spaces
-{- constraintP = Constraint <$> operatorP <* spaces <*> versionP <* spaces -}
-
-operatorP :: P.Parser ConstraintType
-operatorP = P.choice
+operator :: P.Parser ConstraintType
+operator = P.choice
     [ ConstraintEQ <$ P.string "=="
     , ConstraintLE <$ P.string "<="
     , ConstraintGE <$ P.string ">="
@@ -50,8 +59,5 @@ operatorP = P.choice
     , ConstraintLT <$ P.string "<" ]
 
 and :: P.Parser ()
-and = spaces *> P.string "&&" *> spaces >> pure ()
-
-spaces :: P.Parser ()
-spaces = many P.space >> pure ()
+and = spaces *> P.string "&&" *> spaces
 
