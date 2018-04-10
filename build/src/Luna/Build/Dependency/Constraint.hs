@@ -6,6 +6,7 @@ module Luna.Build.Dependency.Constraint
     , constraint
     , constraints
     , V.versionToSolverVersion
+    , V.solverVersionToVersion
     ) where
 
 import Prologue hiding (Constraint, and)
@@ -33,11 +34,6 @@ data Constraint = Constraint
     , __version :: !V.Version
     } deriving (Eq, Generic, Ord, Show)
 makeLenses ''Constraint
-
--- TODO [Ara] Logic around major versions: (< 2.0) should probably exclude 2.0
--- alphas as well
--- TODO [Ara] Logic around prerelease versions. Should they ever be selected
--- automatically?
 
 -----------------------
 -- Parsing Functions --

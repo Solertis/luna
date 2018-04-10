@@ -143,11 +143,13 @@ constraintScript constraints = do
         getDatatypeSortConstructorAccessors version
 
     -- Get the constraints
-    let packageNames       = M.keys constraints
-        packageConstraints = M.elems constraints
+    let packageConstraints = M.elems constraints
+        packageNames = Text.unpack <$> M.keys constraints
 
-    traceShowM packageNames
     traceShowM packageConstraints
+
+    varNames <- T.sequence $ (flip mkFreshVar version) . Text.unpack
+                          <$> M.keys constraints
 
     -- Consider the following package set
     -- foo <= 1.3.1
@@ -159,7 +161,7 @@ constraintScript constraints = do
     vars1 <- T.sequence $ mkInteger <$> [1, 3, 1, 3, 0]
     v1 <- mkApp mkVersion vars1
 
-    vars2 <- T.sequence $ mkInteger <$> [1, 0, 0, 1, 3]
+    vars2 <- T.sequence $ mkInteger <$> [2, 0, 0, 1, 3]
     v2 <- mkApp mkVersion vars2
 
     vars3 <- T.sequence $ mkInteger <$> [1, 3, 0, 3, 0]
@@ -171,8 +173,10 @@ constraintScript constraints = do
     vars5 <- T.sequence $ mkInteger <$> [1, 3, 2, 3, 0]
     v5 <- mkApp mkVersion vars5
 
-    -- Create them with mkFreshVar and then use `mkVar` to access them in a
-    -- programmatic fashion.
+    -- TODO [Ara] Should never suggest prerelease versions unless explicitly
+    -- provided by the user.
+
+    -- Create them with mkFreshVar and use them `varNames`
     foo <- mkFreshVar "foo" version
     bar <- mkFreshVar "bar" version
     baz <- mkFreshVar "baz" version

@@ -103,8 +103,6 @@ parseVersion tx = case P.runParser version "" tx of
 -- Parsing Functions --
 -----------------------
 
--- TODO [Ara] rename parsers
-
 version :: P.Parser Version
 version = do
     major <- natural
