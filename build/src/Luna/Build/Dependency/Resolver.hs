@@ -15,6 +15,7 @@ import Control.Applicative
 import Control.Monad ( join )
 import Data.Maybe
 import qualified Data.Traversable as T
+import qualified Data.Map.Strict  as M
 
 import Luna.Build.Dependency.Constraint
 
@@ -140,6 +141,13 @@ constraintScript constraints = do
     let mkVersionPure = pure mkVersion :: Z3 FuncDecl
     [[getMajor, getMinor, getPatch, getPre, getPreV]] <-
         getDatatypeSortConstructorAccessors version
+
+    -- Get the constraints
+    let packageNames       = M.keys constraints
+        packageConstraints = M.elems constraints
+
+    traceShowM packageNames
+    traceShowM packageConstraints
 
     -- Consider the following package set
     -- foo <= 1.3.1
