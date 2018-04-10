@@ -1,4 +1,4 @@
-module Luna.Build.Dependency.Resolver where
+module Luna.Build.Dependency.Resolver ( runner ) where
 
 import Prologue
 
@@ -131,9 +131,12 @@ mkVersionGE l r = do
     lt <- mkVersionLT l r
     mkNot lt
 
+mkVersionEQ :: (MonadZ3 m) => AST -> AST -> m AST
+mkVersionEQ l r = mkEq l r
+
 -- TODO [Ara] get the solution out of this
-constraintScript :: Z3 (Maybe Integer)
-constraintScript = do
+constraintScript :: ConstraintMap -> Z3 (Maybe Integer)
+constraintScript constraints = do
     version <- mkVersionDatatype
 
     -- Only a single constructor with accessors
@@ -141,26 +144,39 @@ constraintScript = do
     [[getMajor, getMinor, getPatch, getPre, getPreV]] <-
         getDatatypeSortConstructorAccessors version
 
-    vars1 <- T.sequence $ mkInteger <$> [44, 31, 36, 3, 0] -- 1.2.3-rc.5
-    t1 <- mkApp mkVersion vars1
+    -- Consider the following package set
+    -- foo <= 1.3.1
+    -- foo = 1.0.0-beta.3
+    -- bar > 1.3.0
+    -- baz = 2.0.0-rc.1
+    -- baz >= 1.3.2
 
-    vars2 <- T.sequence $ mkInteger <$> [71, 46, 3, 1, 7] -- 0.0.1-alpha.1
-    t2 <- mkApp mkVersion vars2
+    vars1 <- T.sequence $ mkInteger <$> [1, 3, 1, 3, 0]
+    v1 <- mkApp mkVersion vars1
 
-    -- package Foo == t2, >= t1 (expect unsat)
+    vars2 <- T.sequence $ mkInteger <$> [1, 0, 0, 1, 3]
+    v2 <- mkApp mkVersion vars2
+
+    vars3 <- T.sequence $ mkInteger <$> [1, 3, 0, 3, 0]
+    v3 <- mkApp mkVersion vars3
+
+    vars4 <- T.sequence $ mkInteger <$> [2, 0, 0, 2, 1]
+    v4 <- mkApp mkVersion vars4
+
+    vars5 <- T.sequence $ mkInteger <$> [1, 3, 2, 3, 0]
+    v5 <- mkApp mkVersion vars5
 
     foo <- mkFreshVar "foo" version
+    bar <- mkFreshVar "bar" version
+    baz <- mkFreshVar "baz" version
 
-    major1 <- mkApp getMajor [t1]
-    major2 <- mkApp getMajor [t2]
+    check << Z3.Monad.assert =<< mkAnd =<< T.sequence
+        [ mkVersionLE foo v1
+        , mkVersionEQ foo v2
+        , mkVersionGT bar v3
+        , mkVersionEQ baz v4
+        , mkVersionGE baz v5 ]
 
-    Z3.Monad.assert =<< mkAnd =<< T.sequence
-        [ mkVersionLT t1 t2 ]
-        {- [ mkVersionLT foo t1 -}
-        {- , mkEq foo t2 ] -}
-
-    {- check >>= C.liftIO . print -}
-    check
     (result, model) <- getModel
 
     case result of
@@ -169,7 +185,7 @@ constraintScript = do
         Undef -> pure $ Nothing
 
 runner :: IO (Maybe Integer)
-runner = evalZ3 constraintScript >>= \mbSol ->
+runner = evalZ3 (constraintScript undefined) >>= \mbSol ->
             case mbSol of
                 Nothing  -> pure Nothing
                 Just sol -> pure mbSol
