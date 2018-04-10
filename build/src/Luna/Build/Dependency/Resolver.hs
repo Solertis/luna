@@ -135,7 +135,7 @@ mkVersionEQ :: (MonadZ3 m) => AST -> AST -> m AST
 mkVersionEQ l r = mkEq l r
 
 -- TODO [Ara] get the solution out of this
-constraintScript :: ConstraintMap -> Z3 (Maybe Integer)
+constraintScript :: ConstraintMap -> Z3 (Maybe Model)
 constraintScript constraints = do
     version <- mkVersionDatatype
 
@@ -170,23 +170,23 @@ constraintScript constraints = do
     bar <- mkFreshVar "bar" version
     baz <- mkFreshVar "baz" version
 
-    check << Z3.Monad.assert =<< mkAnd =<< T.sequence
+    Z3.Monad.assert =<< mkAnd =<< T.sequence
         [ mkVersionLE foo v1
         , mkVersionEQ foo v2
         , mkVersionGT bar v3
         , mkVersionEQ baz v4
         , mkVersionGE baz v5 ]
 
-    (result, model) <- getModel
+    (result, model) <- solverCheckAndGetModel
 
     case result of
-        Sat -> pure $ Just 1
-        Unsat -> pure $ Nothing
-        Undef -> pure $ Nothing
+        Sat -> pure model
+        Unsat -> pure Nothing
+        Undef -> pure Nothing
 
 runner :: IO (Maybe Integer)
 runner = evalZ3 (constraintScript undefined) >>= \mbSol ->
             case mbSol of
                 Nothing  -> pure Nothing
-                Just sol -> pure mbSol
+                Just sol -> pure $ Just 1
 
