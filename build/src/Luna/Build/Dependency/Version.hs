@@ -6,6 +6,7 @@ module Luna.Build.Dependency.Version
     , parseVersion
     , versionToSolverVersion
     , solverVersionToVersion
+    , solverVersionAsList
     , version
     , prerelease
     , prereleaseType
@@ -19,8 +20,6 @@ import qualified Text.Megaparsec      as P
 import qualified Text.Megaparsec.Text as P
 
 import qualified Data.Char as C
-
--- TODO [Ara] Some concerns over DoS vector on large inputs
 
 -- Versioning in Luna follows the following convention:
 --      major.minor.patch-prerelease.version
@@ -93,6 +92,10 @@ solverVersionToVersion (SolverVersion maj min pat pre preVer) =
             1 -> Just (Prerelease Beta preVer)
             2 -> Just (Prerelease RC preVer)
             _ -> Nothing
+
+solverVersionAsList :: SolverVersion -> [Int]
+solverVersionAsList (SolverVersion maj min pat pre preV) =
+    [maj, min, pat, pre, preV]
 
 parseVersion :: Text -> Maybe Version
 parseVersion tx = case P.runParser version "" tx of

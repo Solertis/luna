@@ -161,7 +161,7 @@ constraintScript constraints = do
     vars1 <- T.sequence $ mkInteger <$> [1, 3, 1, 3, 0]
     v1 <- mkApp mkVersion vars1
 
-    vars2 <- T.sequence $ mkInteger <$> [2, 0, 0, 1, 3]
+    vars2 <- T.sequence $ mkInteger <$> [1, 0, 0, 1, 3]
     v2 <- mkApp mkVersion vars2
 
     vars3 <- T.sequence $ mkInteger <$> [1, 3, 0, 3, 0]
@@ -176,7 +176,7 @@ constraintScript constraints = do
     -- TODO [Ara] Should never suggest prerelease versions unless explicitly
     -- provided by the user.
 
-    -- Create them with mkFreshVar and use them `varNames`
+    -- Create them with mkFreshVar and use the `varNames`
     foo <- mkFreshVar "foo" version
     bar <- mkFreshVar "bar" version
     baz <- mkFreshVar "baz" version

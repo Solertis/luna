@@ -7,6 +7,7 @@ module Luna.Build.Dependency.Constraint
     , constraints
     , V.versionToSolverVersion
     , V.solverVersionToVersion
+    , V.solverVersionAsList
     ) where
 
 import Prologue hiding (Constraint, and)
