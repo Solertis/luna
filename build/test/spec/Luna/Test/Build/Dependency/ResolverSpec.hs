@@ -32,7 +32,7 @@ testConstraints = M.fromList
 spec :: Spec
 spec = do
     describe "testing" $ do
-        it "foo" $ do
+        it "test" $ do
             result <- solveConstraints testConstraints
             result `shouldBe` (Just 1)
 

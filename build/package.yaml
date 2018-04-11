@@ -12,28 +12,29 @@ tests:
         main: Main.hs
         source-dirs: test/spec
         dependencies:
-            - luna-core
-            - luna-build
-            - luna-ci
             - directory
             - filepath
             - hspec
             - hspec-jenkins
             - hspec-megaparsec
+            - luna-build
+            - luna-ci
+            - luna-core
             - open-browser
 
 dependencies:
     - base
-    - luna-core
-    - prologue
+    - containers
     - dependent-state
     - lens
-    - mtl
-    - typelevel
-    - text
+    - luna-core
     - megaparsec
+    - mtl
+    - prologue
+    - sbv
+    - text
+    - typelevel
     - z3
-    - containers
 
 default-extensions:
     - AllowAmbiguousTypes
@@ -58,8 +59,8 @@ default-extensions:
     - GeneralizedNewtypeDeriving
     - InstanceSigs
     - LambdaCase
+    - LiberalTypeSynonyms
     - MonadComprehensions
-#    - MonadFailDesugaring
     - MultiWayIf
     - NamedWildCards
     - NegativeLiterals
@@ -71,6 +72,7 @@ default-extensions:
     - QuasiQuotes
     - RankNTypes
     - RecursiveDo
+    - RelaxedPolyRec
     - ScopedTypeVariables
     - StandaloneDeriving
     - TemplateHaskell
@@ -80,6 +82,5 @@ default-extensions:
     - TypeFamilyDependencies
     - TypeOperators
     - ViewPatterns
+#    - MonadFailDesugaring
 
-    - LiberalTypeSynonyms
-    - RelaxedPolyRec
